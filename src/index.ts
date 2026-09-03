@@ -1,6 +1,35 @@
 import type { Env } from "./env";
 import type { RunRequest } from "./recipe";
 import { runRecipe } from "./browser";
+import {
+  createRateLimiter,
+  parseAllowedHosts,
+  validateRecipeUrls,
+} from "./guard";
+
+const HOUR_MS = 60 * 60 * 1000;
+
+function num(raw: string | undefined, dflt: number): number {
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : dflt;
+}
+
+function clientIp(req: Request): string {
+  return req.headers.get("cf-connecting-ip") ?? "unknown";
+}
+
+// Limiter instances are cached per (limit, window) and shared across
+// requests in this isolate. See guard.ts for the scaling caveat.
+const limiterCache = new Map<string, ReturnType<typeof createRateLimiter>>();
+function limiterFor(limit: number): ReturnType<typeof createRateLimiter> {
+  const key = `${limit}:${HOUR_MS}`;
+  let limiter = limiterCache.get(key);
+  if (!limiter) {
+    limiter = createRateLimiter(limit, HOUR_MS);
+    limiterCache.set(key, limiter);
+  }
+  return limiter;
+}
 
 // Webhands: POST a recipe, get structured data back. The agent operates the real
 // dashboard UI for tools that have no usable API. Writes require confirm:true.
@@ -25,6 +54,9 @@ export default {
     // Public demo, no token. Runs one fixed, safe scrape so a website visitor
     // can see a real browser run (and screenshot) without credentials.
     if (url.pathname === "/demo") {
+      if (!limiterFor(num(env.RATE_LIMIT_DEMO_PER_HOUR, 20)).allowed(`demo:${clientIp(req)}`)) {
+        return json({ error: "demo rate limit exceeded, try again later" }, 429);
+      }
       const demoReq = {
         recipe: {
           url: "https://example.com",
@@ -42,6 +74,9 @@ export default {
     }
 
     if (req.method === "POST" && url.pathname === "/ai") {
+      if (!limiterFor(num(env.RATE_LIMIT_AI_PER_HOUR, 60)).allowed(`ai:${clientIp(req)}`)) {
+        return json({ error: "ai rate limit exceeded, try again later" }, 429);
+      }
       return aiChat(req, env);
     }
 
@@ -61,6 +96,16 @@ export default {
     }
     if (!body?.recipe?.url) {
       return json({ error: "recipe.url is required" }, 400);
+    }
+    const urlError = validateRecipeUrls(
+      body.recipe,
+      parseAllowedHosts(env.ALLOWED_HOSTS),
+    );
+    if (urlError) {
+      return json({ error: urlError }, 400);
+    }
+    if (!limiterFor(num(env.RATE_LIMIT_RUNS_PER_HOUR, 30)).allowed(`run:${clientIp(req)}`)) {
+      return json({ error: "run rate limit exceeded, try again later" }, 429);
     }
 
     const result = await runRecipe(env, body);
