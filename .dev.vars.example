@@ -3,3 +3,10 @@ WEBHANDS_TOKEN=change-me
 ANTHROPIC_API_KEY=
 SUPABASE_URL=
 SUPABASE_SERVICE_ROLE_KEY=
+# Optional: restrict which hosts recipes may browse (comma-separated).
+# Unset = any public http(s) host. Loopback and metadata IPs are always blocked.
+ALLOWED_HOSTS=
+# Optional per-IP hourly caps (defaults: runs 30, demo 20, ai 60).
+RATE_LIMIT_RUNS_PER_HOUR=
+RATE_LIMIT_DEMO_PER_HOUR=
+RATE_LIMIT_AI_PER_HOUR=

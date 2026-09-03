@@ -40,8 +40,18 @@ are deliberate.
 npm install
 cp .dev.vars.example .dev.vars   # set WEBHANDS_TOKEN, optional ANTHROPIC_API_KEY
 npm run dev
+npm test                         # guard + limiter unit tests
 npm run deploy                   # Cloudflare Workers (workers.dev URL)
 ```
+
+## Safety
+
+- `/run` requires `x-webhands-token`. Every recipe URL (entry + `goto`
+  steps) must be http(s); loopback, metadata, and private-range hosts are
+  always refused. Set `ALLOWED_HOSTS` to restrict browsing to your portals.
+- Per-IP hourly caps: `RATE_LIMIT_RUNS_PER_HOUR` (default 30),
+  `RATE_LIMIT_DEMO_PER_HOUR` (20), `RATE_LIMIT_AI_PER_HOUR` (60).
+- Writes are refused without `confirm: true`, and secrets never reach the run log.
 
 ## Example: pull this week's orders from a no-API dashboard
 
