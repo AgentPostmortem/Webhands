@@ -10,10 +10,31 @@ const BLOCKED_HOSTNAMES = new Set([
 
 function isBlockedIp(hostname: string): boolean {
   if (hostname === "127.0.0.1" || hostname === "::1" || hostname === "[::1]") return true;
-  if (hostname === "169.254.169.254" || hostname === "0.0.0.0") return true;
+  const mapped = hostname.match(/^\[::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})\]$/i);
+  if (mapped) {
+    const high = Number.parseInt(mapped[1], 16);
+    const low = Number.parseInt(mapped[2], 16);
+    return isBlockedIpv4(
+      high >> 8,
+      high & 0xff,
+      low >> 8,
+      low & 0xff,
+    );
+  }
   const v4 = hostname.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
   if (!v4) return false;
-  const [a, b] = [Number(v4[1]), Number(v4[2])];
+  return isBlockedIpv4(
+    Number(v4[1]),
+    Number(v4[2]),
+    Number(v4[3]),
+    Number(v4[4]),
+  );
+}
+
+function isBlockedIpv4(a: number, b: number, c: number, d: number): boolean {
+  if (a === 127 && b === 0 && c === 0 && d === 1) return true;
+  if (a === 169 && b === 254 && c === 169 && d === 254) return true;
+  if (a === 0 && b === 0 && c === 0 && d === 0) return true;
   if (a === 10) return true;
   if (a === 172 && b >= 16 && b <= 31) return true;
   if (a === 192 && b === 168) return true;
