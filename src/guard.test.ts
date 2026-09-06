@@ -49,6 +49,17 @@ describe("validateRecipeUrls", () => {
     expect(validateRecipeUrls({ url: "http://93.184.216.34/" }, null)).toBeNull();
   });
 
+  it("blocks alternate loopback and IPv4-mapped IPv6 forms", () => {
+    for (const host of ["0x7f.0.0.1", "2130706433", "[::ffff:127.0.0.1]"]) {
+      expect(validateRecipeUrls({ url: `http://${host}/` }, null)).toEqual(
+        expect.stringMatching(/blocked host/),
+      );
+    }
+    expect(
+      validateRecipeUrls({ url: "http://[::ffff:5db8:d822]/" }, null),
+    ).toBeNull();
+  });
+
   it("enforces the allowlist on entry and goto urls", () => {
     const allow = ["seller.example.com"];
     expect(validateRecipeUrls(base, allow)).toBeNull();
