@@ -88,7 +88,14 @@ export function parseAllowedHosts(raw: string | undefined): string[] | null {
   if (!raw) return null;
   const list = raw
     .split(",")
-    .map((s) => s.trim().toLowerCase().replace(/\/+$/, ""))
+    .map((s) => {
+      const value = s.trim().toLowerCase().replace(/\/+$/, "");
+      try {
+        return new URL(value.includes("://") ? value : `http://${value}`).hostname;
+      } catch {
+        return value;
+      }
+    })
     .filter(Boolean);
   return list.length > 0 ? list : null;
 }

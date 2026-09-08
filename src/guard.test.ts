@@ -105,6 +105,12 @@ describe("parseAllowedHosts", () => {
       parseAllowedHosts(" Seller.Example.COM , ,supplier.example.com/"),
     ).toEqual(["seller.example.com", "supplier.example.com"]);
   });
+
+  it("normalizes URL-style entries to hostnames", () => {
+    expect(parseAllowedHosts("https://seller.example.com:443/")).toEqual([
+      "seller.example.com",
+    ]);
+  });
 });
 
 describe("createRateLimiter", () => {
