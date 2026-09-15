@@ -32,7 +32,8 @@ function limiterFor(limit: number): ReturnType<typeof createRateLimiter> {
 }
 
 // Webhands: POST a recipe, get structured data back. The agent operates the real
-// dashboard UI for tools that have no usable API. Writes require confirm:true.
+// dashboard UI for tools that have no usable API. Interactive recipes require
+// confirm:true unless every step is provably read-only.
 export default {
   async fetch(req: Request, env: Env): Promise<Response> {
     const url = new URL(req.url);
@@ -170,7 +171,8 @@ const AI_SYSTEM =
   "You are the assistant for Webhands, a computer-use agent for tools that have " +
   "no usable API. It drives a real headless browser through a recipe (login, " +
   "navigate, extract), returns structured data plus a screenshot, and refuses " +
-  "any write step unless confirm:true is set. Answer questions about Webhands " +
+  "typing, clicking, or navigation away from the entry URL unless confirm:true " +
+  "is set. Answer questions about Webhands " +
   "and browser automation clearly in at most two complete short sentences. Never " +
   "prefix your answer with assistant or a role label.";
 

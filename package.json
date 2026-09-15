@@ -7,7 +7,8 @@
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run src",
+    "test:confirmation": "node --test test/*.test.mjs"
   },
   "dependencies": {
     "@cloudflare/puppeteer": "^1.1.0"

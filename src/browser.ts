@@ -22,14 +22,15 @@ export async function runRecipe(
 ): Promise<RunResult> {
   const { recipe, confirm } = req;
 
-  // Refuse write recipes unless explicitly confirmed.
+  // Refuse recipes that are not provably read-only unless explicitly confirmed.
   if (hasWriteStep(recipe) && !confirm) {
     return {
       ok: false,
       mode: env.BROWSER ? "live" : "dry",
       steps: [],
       error:
-        "recipe contains a write step; resend with confirm:true to execute",
+        "recipe contains an interaction that requires confirmation; " +
+        "resend with confirm:true to execute",
     };
   }
 

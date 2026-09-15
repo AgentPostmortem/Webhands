@@ -23,9 +23,11 @@ extraction spec. Webhands runs it in a headless browser and returns:
 - `screenshotBase64`, proof of what it saw
 - `steps`, the actions it took
 
-Any step marked `write: true` (e.g. clicking "Issue refund") is **refused unless
-the request includes `confirm: true`**, so reads are safe by default and writes
-are deliberate.
+Webhands uses a conservative confirmation gate. Only `waitFor` and a redundant
+`goto` to the recipe's canonical entry URL are considered provably read-only.
+Typing, every click, and navigation to any other path or query are **refused
+unless the request includes `confirm: true`**. The legacy `write` field remains
+accepted for recipe compatibility, but `write: false` does not bypass the gate.
 
 ## Modes
 
@@ -41,6 +43,7 @@ npm install
 cp .dev.vars.example .dev.vars   # set WEBHANDS_TOKEN, optional ANTHROPIC_API_KEY
 npm run dev
 npm test                         # guard + limiter unit tests
+npm run test:confirmation       # conservative confirmation behavior
 npm run deploy                   # Cloudflare Workers (workers.dev URL)
 ```
 
@@ -59,6 +62,7 @@ npm run deploy                   # Cloudflare Workers (workers.dev URL)
 curl -s "$URL/run" -H "x-webhands-token: $WEBHANDS_TOKEN" \
   -H "content-type: application/json" \
   -d '{
+    "confirm": true,
     "recipe": {
       "url": "https://seller.example.com/login",
       "steps": [
@@ -73,5 +77,6 @@ curl -s "$URL/run" -H "x-webhands-token: $WEBHANDS_TOKEN" \
   }'
 ```
 
-A write recipe (e.g. clicking a "confirm shipment" button) returns an error
-until you resend it with `"confirm": true`.
+An interactive recipe returns an error until you resend it with
+`"confirm": true`. Recipes containing only waits and redundant entry-URL
+navigation can run without confirmation.
