@@ -4,6 +4,7 @@ import {
   parseAllowedHosts,
   validateRecipeUrls,
 } from "./guard";
+import { hasWriteStep } from "./recipe";
 import type { Recipe } from "./recipe";
 
 const base: Recipe = { url: "https://seller.example.com/orders" };
@@ -128,5 +129,36 @@ describe("createRateLimiter", () => {
     expect(limiter.allowed("a", 0)).toBe(true);
     expect(limiter.allowed("b", 0)).toBe(true);
     expect(limiter.allowed("a", 0)).toBe(false);
+  });
+});
+
+describe("hasWriteStep gate (type steps)", () => {
+  const mk = (steps: readonly unknown[]) =>
+    ({ url: "https://a.example", steps }) as Recipe;
+
+  it("treats a bare type step as a write (typing mutates page state)", () => {
+    expect(
+      hasWriteStep(mk([{ action: "type", selector: "#q", text: "hello" }])),
+    ).toBe(true);
+  });
+
+  it("treats a secret type step as a write (credentials)", () => {
+    expect(
+      hasWriteStep(
+        mk([{ action: "type", selector: "#pass", text: "s3cret", secret: true }]),
+      ),
+    ).toBe(true);
+  });
+
+  it("still gates explicit write clicks", () => {
+    expect(
+      hasWriteStep(mk([{ action: "click", selector: "#go", write: true }])),
+    ).toBe(true);
+  });
+
+  it("leaves read-only recipes ungated", () => {
+    expect(
+      hasWriteStep(mk([{ action: "click", selector: "#expand" }])),
+    ).toBe(false);
   });
 });
