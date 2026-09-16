@@ -130,3 +130,37 @@ describe("createRateLimiter", () => {
     expect(limiter.allowed("a", 0)).toBe(false);
   });
 });
+
+describe("waitFor timeoutMs validation", () => {
+  it("rejects negative timeoutMs at validation time", () => {
+    const recipe = {
+      url: "https://example.com",
+      steps: [{ action: "waitFor" as const, selector: "#load", timeoutMs: -5 }],
+    };
+    expect(validateRecipeUrls(recipe, null)).toMatch(/timeout/);
+  });
+
+  it("rejects zero timeoutMs", () => {
+    const recipe = {
+      url: "https://example.com",
+      steps: [{ action: "waitFor" as const, selector: "#load", timeoutMs: 0 }],
+    };
+    expect(validateRecipeUrls(recipe, null)).toMatch(/timeout/);
+  });
+
+  it("rejects NaN timeoutMs", () => {
+    const recipe = {
+      url: "https://example.com",
+      steps: [{ action: "waitFor" as const, selector: "#load", timeoutMs: NaN }],
+    };
+    expect(validateRecipeUrls(recipe, null)).toMatch(/timeout/);
+  });
+
+  it("accepts valid timeoutMs", () => {
+    const recipe = {
+      url: "https://example.com",
+      steps: [{ action: "waitFor" as const, selector: "#load", timeoutMs: 5000 }],
+    };
+    expect(validateRecipeUrls(recipe, null)).toBeNull();
+  });
+});
