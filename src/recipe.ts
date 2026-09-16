@@ -29,7 +29,13 @@ export interface RunRequest {
 }
 
 export function hasWriteStep(recipe: Recipe): boolean {
-  return (recipe.steps ?? []).some(
-    (s) => s.action === "click" && s.write === true,
-  );
+  return (recipe.steps ?? []).some((s) => {
+    // A click is a write only when the author marks it as such.
+    if (s.action === "click" && s.write === true) return true;
+    // Typing is always a write: it mutates field/page statearena, submits text
+    // (including secrets/credentials) into a live page, so it must go through
+    // the confirmation gate like any other write step.
+    if (s.action === "type") return true;
+    return false;
+  });
 }
