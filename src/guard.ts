@@ -79,6 +79,13 @@ export function validateRecipeUrls(
       const err = checkUrl(step.url, allowedHosts, "recipe step goto url");
       if (err) return err;
     }
+    if (
+      step.action === "waitFor" &&
+      step.timeoutMs !== undefined &&
+      (!Number.isFinite(step.timeoutMs) || step.timeoutMs <= 0)
+    ) {
+      return `waitFor step timeout must be a positive number, got ${step.timeoutMs}`;
+    }
   }
   return null;
 }
