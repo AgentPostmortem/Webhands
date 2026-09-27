@@ -8,6 +8,8 @@ const BLOCKED_HOSTNAMES = new Set([
   "metadata.google.internal",
 ]);
 
+const VALID_STEP_ACTIONS = new Set(["goto", "type", "click", "waitFor"]);
+
 function isBlockedIp(hostname: string): boolean {
   if (hostname === "127.0.0.1" || hostname === "::1" || hostname === "[::1]") return true;
   const mapped = hostname.match(/^\[::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})\]$/i);
@@ -75,6 +77,10 @@ export function validateRecipeUrls(
   const entry = checkUrl(recipe.url, allowedHosts, "recipe.url");
   if (entry) return entry;
   for (const step of recipe.steps ?? []) {
+    const action = (step as { action?: unknown } | null)?.action;
+    if (typeof action !== "string" || !VALID_STEP_ACTIONS.has(action)) {
+      return `unknown step action: ${String(action)}`;
+    }
     if (step.action === "goto") {
       const err = checkUrl(step.url, allowedHosts, "recipe step goto url");
       if (err) return err;

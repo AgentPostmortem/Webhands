@@ -75,6 +75,10 @@ export async function runRecipe(
           });
           log.push(`waitFor ${step.selector}`);
           break;
+        default:
+          throw new Error(
+            `unsupported recipe step action: ${String((step as { action?: unknown }).action)}`,
+          );
       }
     }
 
