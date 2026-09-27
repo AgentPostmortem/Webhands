@@ -197,3 +197,13 @@ describe("waitFor timeoutMs validation", () => {
     expect(validateRecipeUrls(recipe, null)).toBeNull();
   });
 });
+describe("step action validation", () => {
+  it("rejects unknown step actions", () => {
+    const recipe = {
+      url: "https://example.com",
+      steps: [{ action: "clikc", selector: "#button" }],
+    } as unknown as Recipe;
+
+    expect(validateRecipeUrls(recipe, null)).toMatch(/action/);
+  });
+});
