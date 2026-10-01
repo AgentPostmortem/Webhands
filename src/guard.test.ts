@@ -96,6 +96,15 @@ describe("validateRecipeUrls", () => {
       ),
     ).toMatch(/allowlist/);
   });
+
+  it("rejects unknown step actions instead of silently ignoring them", () => {
+    const recipe = {
+      url: "https://seller.example.com/",
+      steps: [{ action: "clikc", selector: "#submit" }],
+    } as unknown as Recipe;
+
+    expect(validateRecipeUrls(recipe, null)).toMatch(/unknown step action.*clikc/i);
+  });
 });
 
 describe("parseAllowedHosts", () => {
