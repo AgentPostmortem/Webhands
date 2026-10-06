@@ -9,6 +9,7 @@ const BLOCKED_HOSTNAMES = new Set([
 ]);
 
 const VALID_STEP_ACTIONS = new Set(["goto", "type", "click", "waitFor"]);
+export const MAX_WAIT_TIMEOUT_MS = 120_000;
 
 function isBlockedIp(hostname: string): boolean {
   if (hostname === "127.0.0.1" || hostname === "::1" || hostname === "[::1]") return true;
@@ -85,12 +86,13 @@ export function validateRecipeUrls(
       const err = checkUrl(step.url, allowedHosts, "recipe step goto url");
       if (err) return err;
     }
-    if (
-      step.action === "waitFor" &&
-      step.timeoutMs !== undefined &&
-      (!Number.isFinite(step.timeoutMs) || step.timeoutMs <= 0)
-    ) {
-      return `waitFor step timeout must be a positive number, got ${step.timeoutMs}`;
+    if (step.action === "waitFor" && step.timeoutMs !== undefined) {
+      if (!Number.isFinite(step.timeoutMs) || step.timeoutMs <= 0) {
+        return `waitFor step timeout must be a positive number, got ${step.timeoutMs}`;
+      }
+      if (step.timeoutMs > MAX_WAIT_TIMEOUT_MS) {
+        return `waitFor step timeout exceeds maximum allowed of ${MAX_WAIT_TIMEOUT_MS}ms, got ${step.timeoutMs}`;
+      }
     }
   }
   return null;

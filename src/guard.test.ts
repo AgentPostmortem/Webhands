@@ -205,4 +205,12 @@ describe("waitFor timeoutMs validation", () => {
     };
     expect(validateRecipeUrls(recipe, null)).toBeNull();
   });
+
+  it("rejects timeoutMs exceeding maximum allowed bound", () => {
+    const recipe = {
+      url: "https://example.com",
+      steps: [{ action: "waitFor" as const, selector: "#load", timeoutMs: 1e12 }],
+    };
+    expect(validateRecipeUrls(recipe, null)).toMatch(/timeout.*exceed/i);
+  });
 });
