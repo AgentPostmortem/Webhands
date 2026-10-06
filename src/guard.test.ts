@@ -105,6 +105,26 @@ describe("validateRecipeUrls", () => {
 
     expect(validateRecipeUrls(recipe, null)).toMatch(/unknown step action.*clikc/i);
   });
+
+  it("rejects non-array steps instead of throwing TypeError", () => {
+    const objectSteps = {
+      url: "https://seller.example.com/",
+      steps: {},
+    } as unknown as Recipe;
+    expect(validateRecipeUrls(objectSteps, null)).toMatch(/recipe\.steps must be an array/);
+
+    const stringSteps = {
+      url: "https://seller.example.com/",
+      steps: "not-an-array",
+    } as unknown as Recipe;
+    expect(validateRecipeUrls(stringSteps, null)).toMatch(/recipe\.steps must be an array/);
+
+    const numberSteps = {
+      url: "https://seller.example.com/",
+      steps: 42,
+    } as unknown as Recipe;
+    expect(validateRecipeUrls(numberSteps, null)).toMatch(/recipe\.steps must be an array/);
+  });
 });
 
 describe("parseAllowedHosts", () => {
