@@ -193,7 +193,7 @@ function fixedAiReply(prompt: string): string | undefined {
 
 async function aiChat(req: Request, env: Env): Promise<Response> {
   const { prompt, max } = (await req.json().catch(() => ({}))) as { prompt?: string; max?: number };
-  if (!prompt) return json({ error: "prompt required" }, 400);
+  if (!prompt || typeof prompt !== "string" || !prompt.trim()) return json({ error: "prompt required" }, 400);
   const fixed = fixedAiReply(prompt);
   if (fixed) return json({ reply: fixed });
   if (!env.GROQ_API_KEY) return json({ error: "AI not configured" }, 503);
