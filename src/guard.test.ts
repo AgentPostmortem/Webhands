@@ -105,6 +105,26 @@ describe("validateRecipeUrls", () => {
 
     expect(validateRecipeUrls(recipe, null)).toMatch(/unknown step action.*clikc/i);
   });
+
+  it("rejects non-array steps instead of throwing TypeError", () => {
+    const objectSteps = {
+      url: "https://seller.example.com/",
+      steps: {},
+    } as unknown as Recipe;
+    expect(validateRecipeUrls(objectSteps, null)).toMatch(/recipe\.steps must be an array/);
+
+    const stringSteps = {
+      url: "https://seller.example.com/",
+      steps: "not-an-array",
+    } as unknown as Recipe;
+    expect(validateRecipeUrls(stringSteps, null)).toMatch(/recipe\.steps must be an array/);
+
+    const numberSteps = {
+      url: "https://seller.example.com/",
+      steps: 42,
+    } as unknown as Recipe;
+    expect(validateRecipeUrls(numberSteps, null)).toMatch(/recipe\.steps must be an array/);
+  });
 });
 
 describe("parseAllowedHosts", () => {
@@ -204,5 +224,13 @@ describe("waitFor timeoutMs validation", () => {
       steps: [{ action: "waitFor" as const, selector: "#load", timeoutMs: 5000 }],
     };
     expect(validateRecipeUrls(recipe, null)).toBeNull();
+  });
+
+  it("rejects timeoutMs exceeding maximum allowed bound", () => {
+    const recipe = {
+      url: "https://example.com",
+      steps: [{ action: "waitFor" as const, selector: "#load", timeoutMs: 1e12 }],
+    };
+    expect(validateRecipeUrls(recipe, null)).toMatch(/timeout.*exceed/i);
   });
 });

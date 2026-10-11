@@ -73,3 +73,18 @@ describe("/demo method gate", () => {
     expect(body.error).toMatch(/POST/);
   });
 });
+
+describe("/ai prompt validation", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("rejects whitespace-only prompt with 400 without calling Groq", async () => {
+    const groqFetch = vi.spyOn(globalThis, "fetch");
+
+    const res = await postAi({ prompt: "   \n\t  " });
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { error?: string };
+    expect(body.error).toBe("prompt required");
+    expect(groqFetch).not.toHaveBeenCalled();
+  });
+});
