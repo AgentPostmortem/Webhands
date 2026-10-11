@@ -59,6 +59,21 @@ describe("/ai output length", () => {
   });
 });
 
+describe("/demo method gate", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("rejects non-POST /demo requests without executing a recipe run", async () => {
+    const res = await worker.fetch(
+      new Request("https://webhands.test/demo", { method: "GET" }),
+      env,
+    );
+
+    expect(res.status).toBe(405);
+    const body = (await res.json()) as { error?: string };
+    expect(body.error).toMatch(/POST/);
+  });
+});
+
 describe("/ai prompt validation", () => {
   afterEach(() => vi.restoreAllMocks());
 
