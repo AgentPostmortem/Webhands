@@ -76,6 +76,9 @@ export function validateRecipeUrls(
 ): string | null {
   const entry = checkUrl(recipe.url, allowedHosts, "recipe.url");
   if (entry) return entry;
+  if (recipe.steps !== undefined && recipe.steps !== null && !Array.isArray(recipe.steps)) {
+    return "recipe.steps must be an array";
+  }
   for (const step of recipe.steps ?? []) {
     const action = (step as { action?: unknown } | null)?.action;
     if (typeof action !== "string" || !VALID_STEP_ACTIONS.has(action)) {
