@@ -188,7 +188,7 @@ describe("hasWriteStep gate (type steps)", () => {
 
   it("leaves read-only recipes ungated", () => {
     expect(
-      hasWriteStep(mk([{ action: "click", selector: "#expand" }])),
+      hasWriteStep(mk([{ action: "waitFor", selector: "#expand" }])),
     ).toBe(false);
   });
 });
