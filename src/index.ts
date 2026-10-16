@@ -55,6 +55,9 @@ export default {
     // Public demo, no token. Runs one fixed, safe scrape so a website visitor
     // can see a real browser run (and screenshot) without credentials.
     if (url.pathname === "/demo") {
+      if (req.method !== "POST") {
+        return json({ error: "POST /demo required" }, 405);
+      }
       if (!limiterFor(num(env.RATE_LIMIT_DEMO_PER_HOUR, 20)).allowed(`demo:${clientIp(req)}`)) {
         return json({ error: "demo rate limit exceeded, try again later" }, 429);
       }
@@ -195,11 +198,12 @@ function fixedAiReply(prompt: string): string | undefined {
 
 async function aiChat(req: Request, env: Env): Promise<Response> {
   const { prompt, max } = (await req.json().catch(() => ({}))) as { prompt?: string; max?: number };
-  if (!prompt) return json({ error: "prompt required" }, 400);
+  if (!prompt || typeof prompt !== "string" || !prompt.trim()) return json({ error: "prompt required" }, 400);
   const fixed = fixedAiReply(prompt);
   if (fixed) return json({ reply: fixed });
   if (!env.GROQ_API_KEY) return json({ error: "AI not configured" }, 503);
-  const outputMax = Math.min(Math.max(max ?? 140, 32), 220);
+  const rawMax = typeof max === "number" && Number.isFinite(max) ? max : 140;
+  const outputMax = Math.min(Math.max(rawMax, 32), 220);
   try {
     const r = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",

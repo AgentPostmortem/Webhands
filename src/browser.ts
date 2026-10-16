@@ -72,10 +72,14 @@ export async function runRecipe(
           break;
         case "waitFor":
           await page.waitForSelector(step.selector, {
-            timeout: step.timeoutMs ?? 15000,
+            timeout: Math.min(step.timeoutMs ?? 15000, 120000),
           });
           log.push(`waitFor ${step.selector}`);
           break;
+        default:
+          throw new Error(
+            `unsupported recipe step action: ${String((step as { action?: unknown }).action)}`,
+          );
       }
     }
 

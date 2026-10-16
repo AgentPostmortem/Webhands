@@ -30,14 +30,16 @@ export interface RunRequest {
 }
 
 export function hasWriteStep(recipe: Recipe): boolean {
-  return (recipe.steps ?? []).some((step) => {
+  if (!Array.isArray(recipe.steps)) return false;
+  return recipe.steps.some((step) => {
     switch (step.action) {
       case "waitFor":
         return false;
       case "goto":
         return !isSameUrl(step.url, recipe.url);
-      case "type":
-      case "click":
+      default:
+        // Typing, every click (whatever its `write` label says) and any other
+        // action can change page state, so all of them need confirmation.
         return true;
     }
   });

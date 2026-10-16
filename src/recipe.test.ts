@@ -1,31 +1,11 @@
-import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
-import test from "node:test";
-import ts from "typescript";
-
-const source = await readFile(
-  new URL("../src/recipe.ts", import.meta.url),
-  "utf8",
-);
-const compiled = ts.transpileModule(source, {
-  compilerOptions: {
-    module: ts.ModuleKind.ESNext,
-    target: ts.ScriptTarget.ES2022,
-  },
-  fileName: "src/recipe.ts",
-  reportDiagnostics: true,
-});
-assert.equal(compiled.diagnostics?.length ?? 0, 0);
-
-const moduleUrl = `data:text/javascript;base64,${Buffer.from(
-  compiled.outputText,
-).toString("base64")}`;
-const { hasWriteStep } = await import(moduleUrl);
+import { describe, expect, it } from "vitest";
+import { hasWriteStep } from "./recipe";
+import type { Step } from "./recipe";
 
 const entryUrl = "https://dashboard.example.com";
 
-test("requires confirmation unless every recipe step is provably read-only", async (t) => {
-  const cases = [
+describe("hasWriteStep gate (only provably read-only recipes skip confirmation)", () => {
+  const cases: Array<{ name: string; steps: Step[]; expected: boolean }> = [
     { name: "no steps", steps: [], expected: false },
     {
       name: "wait for content",
@@ -70,9 +50,8 @@ test("requires confirmation unless every recipe step is provably read-only", asy
   ];
 
   for (const scenario of cases) {
-    await t.test(scenario.name, () => {
-      assert.equal(
-        hasWriteStep({ url: entryUrl, steps: scenario.steps }),
+    it(scenario.name, () => {
+      expect(hasWriteStep({ url: entryUrl, steps: scenario.steps })).toBe(
         scenario.expected,
       );
     });

@@ -42,8 +42,7 @@ accepted for recipe compatibility, but `write: false` does not bypass the gate.
 npm install
 cp .dev.vars.example .dev.vars   # set WEBHANDS_TOKEN, optional ANTHROPIC_API_KEY
 npm run dev
-npm test                         # guard + limiter unit tests
-npm run test:confirmation       # conservative confirmation behavior
+npm test                         # guard, limiter and confirmation-gate unit tests
 npm run deploy                   # Cloudflare Workers (workers.dev URL)
 ```
 

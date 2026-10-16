@@ -8,6 +8,9 @@ const BLOCKED_HOSTNAMES = new Set([
   "metadata.google.internal",
 ]);
 
+const VALID_STEP_ACTIONS = new Set(["goto", "type", "click", "waitFor"]);
+export const MAX_WAIT_TIMEOUT_MS = 120_000;
+
 function isBlockedIp(hostname: string): boolean {
   if (hostname === "127.0.0.1" || hostname === "::1" || hostname === "[::1]") return true;
   const mapped = hostname.match(/^\[::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})\]$/i);
@@ -74,10 +77,25 @@ export function validateRecipeUrls(
 ): string | null {
   const entry = checkUrl(recipe.url, allowedHosts, "recipe.url");
   if (entry) return entry;
+  if (recipe.steps !== undefined && recipe.steps !== null && !Array.isArray(recipe.steps)) {
+    return "recipe.steps must be an array";
+  }
   for (const step of recipe.steps ?? []) {
+    const action = (step as { action?: unknown } | null)?.action;
+    if (typeof action !== "string" || !VALID_STEP_ACTIONS.has(action)) {
+      return `unknown step action: ${String(action)}`;
+    }
     if (step.action === "goto") {
       const err = checkUrl(step.url, allowedHosts, "recipe step goto url");
       if (err) return err;
+    }
+    if (step.action === "waitFor" && step.timeoutMs !== undefined) {
+      if (!Number.isFinite(step.timeoutMs) || step.timeoutMs <= 0) {
+        return `waitFor step timeout must be a positive number, got ${step.timeoutMs}`;
+      }
+      if (step.timeoutMs > MAX_WAIT_TIMEOUT_MS) {
+        return `waitFor step timeout exceeds maximum allowed of ${MAX_WAIT_TIMEOUT_MS}ms, got ${step.timeoutMs}`;
+      }
     }
   }
   return null;
@@ -88,7 +106,14 @@ export function parseAllowedHosts(raw: string | undefined): string[] | null {
   if (!raw) return null;
   const list = raw
     .split(",")
-    .map((s) => s.trim().toLowerCase().replace(/\/+$/, ""))
+    .map((s) => {
+      const value = s.trim().toLowerCase().replace(/\/+$/, "");
+      try {
+        return new URL(value.includes("://") ? value : `http://${value}`).hostname;
+      } catch {
+        return value;
+      }
+    })
     .filter(Boolean);
   return list.length > 0 ? list : null;
 }

@@ -4,6 +4,7 @@ import {
   parseAllowedHosts,
   validateRecipeUrls,
 } from "./guard";
+import { hasWriteStep } from "./recipe";
 import type { Recipe } from "./recipe";
 
 const base: Recipe = { url: "https://seller.example.com/orders" };
@@ -95,6 +96,35 @@ describe("validateRecipeUrls", () => {
       ),
     ).toMatch(/allowlist/);
   });
+
+  it("rejects unknown step actions instead of silently ignoring them", () => {
+    const recipe = {
+      url: "https://seller.example.com/",
+      steps: [{ action: "clikc", selector: "#submit" }],
+    } as unknown as Recipe;
+
+    expect(validateRecipeUrls(recipe, null)).toMatch(/unknown step action.*clikc/i);
+  });
+
+  it("rejects non-array steps instead of throwing TypeError", () => {
+    const objectSteps = {
+      url: "https://seller.example.com/",
+      steps: {},
+    } as unknown as Recipe;
+    expect(validateRecipeUrls(objectSteps, null)).toMatch(/recipe\.steps must be an array/);
+
+    const stringSteps = {
+      url: "https://seller.example.com/",
+      steps: "not-an-array",
+    } as unknown as Recipe;
+    expect(validateRecipeUrls(stringSteps, null)).toMatch(/recipe\.steps must be an array/);
+
+    const numberSteps = {
+      url: "https://seller.example.com/",
+      steps: 42,
+    } as unknown as Recipe;
+    expect(validateRecipeUrls(numberSteps, null)).toMatch(/recipe\.steps must be an array/);
+  });
 });
 
 describe("parseAllowedHosts", () => {
@@ -104,6 +134,12 @@ describe("parseAllowedHosts", () => {
     expect(
       parseAllowedHosts(" Seller.Example.COM , ,supplier.example.com/"),
     ).toEqual(["seller.example.com", "supplier.example.com"]);
+  });
+
+  it("normalizes URL-style entries to hostnames", () => {
+    expect(parseAllowedHosts("https://seller.example.com:443/")).toEqual([
+      "seller.example.com",
+    ]);
   });
 });
 
@@ -122,5 +158,79 @@ describe("createRateLimiter", () => {
     expect(limiter.allowed("a", 0)).toBe(true);
     expect(limiter.allowed("b", 0)).toBe(true);
     expect(limiter.allowed("a", 0)).toBe(false);
+  });
+});
+
+
+describe("hasWriteStep gate (type steps)", () => {
+  const mk = (steps: readonly unknown[]) =>
+    ({ url: "https://a.example", steps }) as Recipe;
+
+  it("treats a bare type step as a write (typing mutates page state)", () => {
+    expect(
+      hasWriteStep(mk([{ action: "type", selector: "#q", text: "hello" }])),
+    ).toBe(true);
+  });
+
+  it("treats a secret type step as a write (credentials)", () => {
+    expect(
+      hasWriteStep(
+        mk([{ action: "type", selector: "#pass", text: "s3cret", secret: true }]),
+      ),
+    ).toBe(true);
+  });
+
+  it("still gates explicit write clicks", () => {
+    expect(
+      hasWriteStep(mk([{ action: "click", selector: "#go", write: true }])),
+    ).toBe(true);
+  });
+
+  it("leaves read-only recipes ungated", () => {
+    expect(
+      hasWriteStep(mk([{ action: "waitFor", selector: "#expand" }])),
+    ).toBe(false);
+  });
+});
+
+describe("waitFor timeoutMs validation", () => {
+  it("rejects negative timeoutMs at validation time", () => {
+    const recipe = {
+      url: "https://example.com",
+      steps: [{ action: "waitFor" as const, selector: "#load", timeoutMs: -5 }],
+    };
+    expect(validateRecipeUrls(recipe, null)).toMatch(/timeout/);
+  });
+
+  it("rejects zero timeoutMs", () => {
+    const recipe = {
+      url: "https://example.com",
+      steps: [{ action: "waitFor" as const, selector: "#load", timeoutMs: 0 }],
+    };
+    expect(validateRecipeUrls(recipe, null)).toMatch(/timeout/);
+  });
+
+  it("rejects NaN timeoutMs", () => {
+    const recipe = {
+      url: "https://example.com",
+      steps: [{ action: "waitFor" as const, selector: "#load", timeoutMs: NaN }],
+    };
+    expect(validateRecipeUrls(recipe, null)).toMatch(/timeout/);
+  });
+
+  it("accepts valid timeoutMs", () => {
+    const recipe = {
+      url: "https://example.com",
+      steps: [{ action: "waitFor" as const, selector: "#load", timeoutMs: 5000 }],
+    };
+    expect(validateRecipeUrls(recipe, null)).toBeNull();
+  });
+
+  it("rejects timeoutMs exceeding maximum allowed bound", () => {
+    const recipe = {
+      url: "https://example.com",
+      steps: [{ action: "waitFor" as const, selector: "#load", timeoutMs: 1e12 }],
+    };
+    expect(validateRecipeUrls(recipe, null)).toMatch(/timeout.*exceed/i);
   });
 });
